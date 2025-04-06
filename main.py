@@ -15,7 +15,7 @@ POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
 RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
 
 DB_PATH = "/opt/raindrop-pocket-sync/db.sqlite3"
-RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID or '0'}"
+RAINDROP_API = "https://api.raindrop.io/rest/v1/raindrop"
 POCKET_ADD_API = "https://getpocket.com/v3/add"
 POCKET_SEND_API = "https://getpocket.com/v3/send"
 
@@ -47,10 +47,11 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
     since_dt = isoparse(since_iso)  # ✅ Normalize once outside loop
 
     while page <= max_pages:
-        url = f"{RAINDROP_API}?sort=-lastUpdate"
+        url = f"{RAINDROP_API}/search"
         params = {
+            "sort": "-lastUpdate",
+            "perpage": per_page,
             "page": page,
-            "perpage": per_page
         }
 
         res = requests.get(url, headers=headers, params=params)
