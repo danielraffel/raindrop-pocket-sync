@@ -44,6 +44,7 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
 
     all_items = []
     page = 1
+    since_dt = isoparse(since_iso)  # ✅ Parse this first
 
     while page <= max_pages:
         url = f"{RAINDROP_API}?sort=-lastUpdate"
@@ -62,13 +63,17 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
         if not items:
             break
 
+        # Stop early if items are too old
+        latest_item_date = isoparse(items[0]["lastUpdate"])
+        if latest_item_date <= since_dt:
+            if DEBUG:
+                print(f"⏹️ Stopping at page {page} — items older than since_iso")
+            break
+
         all_items.extend(items)
         page += 1
 
-    # Filter only bookmarks that are newer than the last seen
-    since_dt = isoparse(since_iso)
     filtered_items = [b for b in all_items if isoparse(b["lastUpdate"]) > since_dt]
-    
     return filtered_items
 
 def get_last_update(bookmark_id, conn):
@@ -137,6 +142,10 @@ def run_sync():
             print("🔍 Sample Raindrop entries:")
             for b in bookmarks[:5]:
                 print("  - ID:", b.get("_id"), "| Title:", b.get("title"), "| URL:", b.get("link"), "| Updated:", b.get("lastUpdate"))
+
+            print("📝 New bookmarks to sync:")
+            for b in bookmarks:
+                print(f"  - {b.get('title')} | {b.get('link')} | Updated: {b.get('lastUpdate')}")
 
     new_or_updated = 0
 
