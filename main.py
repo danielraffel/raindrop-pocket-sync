@@ -12,12 +12,13 @@ RAINDROP_TOKEN = os.getenv("RAINDROP_TOKEN")
 POCKET_CONSUMER_KEY = os.getenv("POCKET_CONSUMER_KEY")
 POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
 RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
-print("🔐 Loaded Raindrop token:", RAINDROP_TOKEN[:8], "...")
 
 DB_PATH = "db.sqlite3"
 RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
 POCKET_ADD_API = "https://getpocket.com/v3/add"
 POCKET_SEND_API = "https://getpocket.com/v3/send"
+
+DEBUG = False
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -38,8 +39,9 @@ def get_raindrop_bookmarks():
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
     res = requests.get(RAINDROP_API + "?sort=-lastUpdate", headers=headers)
-    print("📡 Raw Raindrop API response:")
-    print(res.text)  # ← full response from Raindrop
+    if DEBUG:
+        print("📡 Raw Raindrop API response:")
+        print(res.text)
     res.raise_for_status()
     return res.json().get("items", [])
 
@@ -90,13 +92,14 @@ def run_sync():
     conn = sqlite3.connect(DB_PATH)
     bookmarks = get_raindrop_bookmarks()
 
-    print(f"📥 Fetched {len(bookmarks)} bookmarks from Raindrop.")
-    if not bookmarks:
-        print("⚠️ No bookmarks returned! Double-check RAINDROP_COLLECTION_ID (currently set to:", RAINDROP_COLLECTION_ID, ") and ensure your token is valid.")
-    else:
-        print("🔍 Sample Raindrop entries:")
-        for b in bookmarks[:5]:
-            print("  - ID:", b.get("_id"), "| Title:", b.get("title"), "| URL:", b.get("link"), "| Updated:", b.get("lastUpdate"))
+    if DEBUG:
+        print(f"📥 Fetched {len(bookmarks)} bookmarks from Raindrop.")
+        if not bookmarks:
+            print("⚠️ No bookmarks returned! Check RAINDROP_COLLECTION_ID (currently set to:", RAINDROP_COLLECTION_ID, ") and ensure your token is valid.")
+        else:
+            print("🔍 Sample Raindrop entries:")
+            for b in bookmarks[:5]:
+                print("  - ID:", b.get("_id"), "| Title:", b.get("title"), "| URL:", b.get("link"), "| Updated:", b.get("lastUpdate"))
 
     new_or_updated = 0
 
@@ -109,7 +112,8 @@ def run_sync():
         important = item.get("important", False)
 
         stored_update = get_last_update(bid, conn)
-        print(f"🔎 Checking bookmark: {title} | lastUpdate: {last_update} | stored: {stored_update}")
+        if DEBUG:
+            print(f"🔎 Checking bookmark: {title} | lastUpdate: {last_update} | stored: {stored_update}")
 
         if stored_update is None or last_update > stored_update:
             print(f"📬 Syncing bookmark: {title} ({link})")
@@ -134,7 +138,13 @@ def run_sync():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--init", action="store_true", help="Initialize database and exit.")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
     args = parser.parse_args()
+
+    DEBUG = args.debug
+
+    if DEBUG:
+        print("🔐 Loaded Raindrop token:", RAINDROP_TOKEN[:8], "...")
 
     if args.init:
         init_db()
