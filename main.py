@@ -8,12 +8,11 @@ import argparse
 # Load environment variables
 load_dotenv()
 
-print("🔐 Loaded Raindrop token:", RAINDROP_TOKEN[:8], "...")
-
 RAINDROP_TOKEN = os.getenv("RAINDROP_TOKEN")
 POCKET_CONSUMER_KEY = os.getenv("POCKET_CONSUMER_KEY")
 POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
 RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
+print("🔐 Loaded Raindrop token:", RAINDROP_TOKEN[:8], "...")
 
 DB_PATH = "db.sqlite3"
 RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
