@@ -14,7 +14,7 @@ POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
 RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
 
 DB_PATH = "/opt/raindrop-pocket-sync/db.sqlite3"
-RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
+RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID or '0'}"
 POCKET_ADD_API = "https://getpocket.com/v3/add"
 POCKET_SEND_API = "https://getpocket.com/v3/send"
 
@@ -61,14 +61,12 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
         if not items:
             break
 
-        # Stop fetching once all items on this page are older than last seen
-        if all(b["lastUpdate"] <= since_iso for b in items):
-            break
-
         all_items.extend(items)
         page += 1
 
-    return all_items
+    # Filter only bookmarks that are newer than the last seen
+    filtered_items = [b for b in all_items if b["lastUpdate"] > since_iso]
+    return filtered_items
 
 def get_last_update(bookmark_id, conn):
     cur = conn.cursor()
