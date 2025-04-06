@@ -75,6 +75,15 @@ You use Raindrop.io as your primary bookmark manager, and want Pocket as a backu
    - Create a `.env` template file for your credentials
    - Create necessary directory structure
 
+### 🧩 Database Initialization (One-Time)
+
+After running the setup script, initialize the local database (required for syncing to work):
+
+```bash
+source .venv/bin/activate  # If not already activated
+python main.py --init
+```
+
 ---
 
 ## Credential Setup
