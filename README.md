@@ -199,7 +199,7 @@ To check for new URLs every 10 minutes:
 
 2. Add this line (update paths to match your installation):
    ```
-   */10 * * * * cd /path/to/raindrop-pocket-sync && /path/to/raindrop-pocket-sync/.venv/bin/python main.py >> logs/sync.log 2>&1
+   */10 * * * * cd /opt/raindrop-pocket-sync && /opt/raindrop-pocket-sync/.venv/bin/python main.py >> cron.log 2>&1
    ```
 
 ### Additional Commands
