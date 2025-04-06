@@ -199,6 +199,18 @@ python main.py --mark-all-seen
 
 This marks all existing Raindrop bookmarks as "already synced" to Pocket.
 
+### 📌 Bulk Sync Limits and Verification
+
+- The `--mark-all-seen` command supports marking up to **10,000** bookmarks as "already seen" in one run.
+- If your Raindrop collection exceeds that, run the script again or adjust the `max_total` parameter in the script source.
+- To verify how many bookmarks were marked, you can inspect the local SQLite database with:
+
+```bash
+sqlite3 /opt/raindrop-pocket-sync/db.sqlite3 "SELECT COUNT(*) FROM seen_bookmarks;"
+```
+
+This will return the number of Raindrop bookmarks currently tracked as “seen.”
+
 ### Regular Usage
 
 To manually run the sync:
