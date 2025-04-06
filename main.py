@@ -8,6 +8,8 @@ import argparse
 # Load environment variables
 load_dotenv()
 
+print("🔐 Loaded Raindrop token:", RAINDROP_TOKEN[:8], "...")
+
 RAINDROP_TOKEN = os.getenv("RAINDROP_TOKEN")
 POCKET_CONSUMER_KEY = os.getenv("POCKET_CONSUMER_KEY")
 POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
@@ -67,4 +69,3 @@ def post_to_pocket(title, url, tags):
     res = requests.post(POCKET_ADD_API, json=data, headers={"Content-Type": "application/json", "X-Accept": "application/json"})
     res.raise_for_status()
     return res.json()
-
