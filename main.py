@@ -40,7 +40,7 @@ def get_raindrop_bookmarks(max_total=10000):
     }
 
     page = 1  # Start from 1 for better compatibility with Raindrop
-    per_page = 100
+    per_page = 50  # Use 50 if 100 isn't reliably respected
     all_items = []
 
     while len(all_items) < max_total:
@@ -53,8 +53,13 @@ def get_raindrop_bookmarks(max_total=10000):
         res = requests.get(url, headers=headers, params=params)
         res.raise_for_status()
 
+        # Optional: inspect the full response JSON to debug API behavior
+        if DEBUG:
+            print(f"🛠 Full response JSON from page {page}:\n{res.json()}")
+
         items = res.json().get("items", [])
-        print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
+        if DEBUG:
+            print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
 
         if not items:
             break
