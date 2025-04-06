@@ -39,23 +39,20 @@ def get_raindrop_bookmarks(max_total=2500):
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
 
-    page = 0
-    per_page = 100
+    page = 1  # Start from 1, not 0
+    per_page = 50  # Respect the API's max limit
     all_items = []
 
     while len(all_items) < max_total:
         url = f"{RAINDROP_API}?sort=-lastUpdate&page={page}&perpage={per_page}"
         res = requests.get(url, headers=headers)
         res.raise_for_status()
-
         items = res.json().get("items", [])
         if not items:
             break
-
         all_items.extend(items)
         if len(items) < per_page:
-            break  # no more pages
-
+            break
         page += 1
 
     return all_items[:max_total]
