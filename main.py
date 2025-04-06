@@ -1,25 +1,27 @@
-
 import os
 import sqlite3
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
-from datetime import datetime, timezone
-import sys
+import argparse
 
+# Load environment variables
 load_dotenv()
 
 RAINDROP_TOKEN = os.getenv("RAINDROP_TOKEN")
-RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
 POCKET_CONSUMER_KEY = os.getenv("POCKET_CONSUMER_KEY")
 POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
+RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
 
-RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
 DB_PATH = "db.sqlite3"
+RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
+POCKET_ADD_API = "https://getpocket.com/v3/add"
+POCKET_SEND_API = "https://getpocket.com/v3/send"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS seen_bookmarks (
             id INTEGER PRIMARY KEY,
             link TEXT NOT NULL UNIQUE,
@@ -30,72 +32,95 @@ def init_db():
     conn.close()
     print("✅ Database initialized.")
 
-def get_seen_ids():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id FROM seen_bookmarks")
-    ids = {row[0] for row in c.fetchall()}
-    conn.close()
-    return ids
-
 def get_raindrop_bookmarks():
-    headers = {"Authorization": f"Bearer {RAINDROP_TOKEN}"}
+    headers = {
+        "Authorization": f"Bearer {RAINDROP_TOKEN}"
+    }
     res = requests.get(RAINDROP_API + "?sort=-lastUpdate", headers=headers)
-    if res.status_code == 401:
-        print("❌ Unauthorized: Please check your RAINDROP_TOKEN")
-        print("Response:", res.text)
-        sys.exit(1)
     res.raise_for_status()
     return res.json().get("items", [])
 
-def post_to_pocket(url, title=None, tags=None, favorite=False):
+def get_last_update(bookmark_id, conn):
+    cur = conn.cursor()
+    cur.execute("SELECT last_update FROM seen_bookmarks WHERE id = ?", (bookmark_id,))
+    row = cur.fetchone()
+    return row[0] if row else None
+
+def update_db(bookmark_id, link, last_update, conn):
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO seen_bookmarks (id, link, last_update) VALUES (?, ?, ?)",
+        (bookmark_id, link, last_update)
+    )
+    conn.commit()
+
+def post_to_pocket(title, url, tags):
     data = {
         "url": url,
-        "favorite": 1 if favorite else 0,
+        "title": title,
+        "tags": ",".join(tags) if tags else "",
         "consumer_key": POCKET_CONSUMER_KEY,
         "access_token": POCKET_ACCESS_TOKEN
     }
-    if title:
-        data["title"] = title
-    if tags:
-        data["tags"] = ",".join(tags)
-    res = requests.post("https://getpocket.com/v3/add", json=data, headers={
-        "Content-Type": "application/json; charset=UTF-8",
-        "X-Accept": "application/json"
-    })
+    res = requests.post(POCKET_ADD_API, json=data, headers={"Content-Type": "application/json", "X-Accept": "application/json"})
     res.raise_for_status()
+    return res.json()
 
-def mark_bookmarks_as_seen(bookmarks):
+def favorite_in_pocket(item_id):
+    data = {
+        "consumer_key": POCKET_CONSUMER_KEY,
+        "access_token": POCKET_ACCESS_TOKEN,
+        "actions": [
+            {
+                "action": "favorite",
+                "item_id": item_id
+            }
+        ]
+    }
+    res = requests.post(POCKET_SEND_API, json=data, headers={"Content-Type": "application/json", "X-Accept": "application/json"})
+    res.raise_for_status()
+    return res.json()
+
+def run_sync():
+    print(f"🔍 Checking for new or updated bookmarks at {datetime.utcnow().isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    for item in bookmarks:
-        c.execute("INSERT OR IGNORE INTO seen_bookmarks (id, link, last_update) VALUES (?, ?, ?)",
-                  (item["_id"], item["link"], item["lastUpdate"]))
-    conn.commit()
-    conn.close()
-
-def run_sync(mark_all_seen=False):
-    print(f"🔍 Checking Raindrop for new bookmarks at {datetime.now(timezone.utc).isoformat()}...")
     bookmarks = get_raindrop_bookmarks()
-    seen_ids = get_seen_ids()
+    new_or_updated = 0
 
-    if mark_all_seen:
-        mark_bookmarks_as_seen(bookmarks)
-        print("✅ Marked all current bookmarks as seen (no items sent to Pocket).")
-        return
+    for item in bookmarks:
+        bid = item["_id"]
+        link = item.get("link")
+        title = item.get("title")
+        tags = item.get("tags", [])
+        last_update = item.get("lastUpdate")
+        important = item.get("important", False)
 
-    new_items = [item for item in bookmarks if item["_id"] not in seen_ids]
-    print(f"📌 Found {len(new_items)} new bookmark(s)")
+        stored_update = get_last_update(bid, conn)
 
-    for item in new_items:
-        print(f"→ Sending to Pocket: {item['link']}")
-        post_to_pocket(item["link"], item.get("title"), item.get("tags", []), item.get("important", False))
-        mark_bookmarks_as_seen([item])
+        if stored_update is None or last_update > stored_update:
+            print(f"📬 Syncing bookmark: {title} ({link})")
+            try:
+                pocket_response = post_to_pocket(title, link, tags)
+                item_id = pocket_response.get("item", {}).get("item_id")
+
+                if important and item_id:
+                    print("🌟 Marking as favorite in Pocket...")
+                    favorite_in_pocket(item_id)
+
+                update_db(bid, link, last_update, conn)
+                new_or_updated += 1
+            except Exception as e:
+                print(f"❌ Failed to sync bookmark: {e}")
+
+    conn.close()
+    print(f"✅ Sync complete. {new_or_updated} bookmarks added or updated.")
 
 if __name__ == "__main__":
-    if "--init" in sys.argv:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--init", action="store_true", help="Initialize database and exit.")
+    args = parser.parse_args()
+
+    if args.init:
         init_db()
-    elif "--mark-all-seen" in sys.argv:
-        run_sync(mark_all_seen=True)
     else:
         run_sync()
