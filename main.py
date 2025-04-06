@@ -3,6 +3,7 @@ import sqlite3
 import requests
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from dateutil.parser import isoparse
 import argparse
 
 # Load environment variables
@@ -65,7 +66,9 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
         page += 1
 
     # Filter only bookmarks that are newer than the last seen
-    filtered_items = [b for b in all_items if b["lastUpdate"] > since_iso]
+    since_dt = isoparse(since_iso)
+    filtered_items = [b for b in all_items if isoparse(b["lastUpdate"]) > since_dt]
+    
     return filtered_items
 
 def get_last_update(bookmark_id, conn):
