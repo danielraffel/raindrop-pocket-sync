@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import argparse
 
@@ -82,7 +82,7 @@ def favorite_in_pocket(item_id):
     return res.json()
 
 def run_sync():
-    print(f"🔍 Checking for new or updated bookmarks at {datetime.now(datetime.UTC).isoformat()}...")
+    print(f"🔍 Checking for new or updated bookmarks at {datetime.now(timezone.utc).isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
     bookmarks = get_raindrop_bookmarks()
     new_or_updated = 0
