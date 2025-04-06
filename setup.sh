@@ -31,4 +31,6 @@ fi
 echo "Initializing SQLite database..."
 .venv/bin/python main.py --init
 
-echo "✅ Setup complete. Run with: source .venv/bin/activate && .venv/bin/python main.py"
+echo "✅ Setup complete."
+echo "👉 If you just imported your Pocket bookmarks to Raindrop, skip syncing and mark everything in Raindrop as already seen: .venv/bin/python main.py --mark-all-seen"
+echo "👉 Then, to sync new items from Raindrop → Pocket: .venv/bin/python main.py"
