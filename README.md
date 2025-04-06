@@ -224,7 +224,7 @@ To check for new URLs every 10 minutes:
 
 ### Additional Commands
 
-Reset the database:
+Initialize the database (safe to re-run, no data will be lost):
 ```bash
 python main.py --init
 ```
