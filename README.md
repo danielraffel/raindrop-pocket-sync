@@ -210,6 +210,80 @@ python main.py --init
 ```
 
 ---
+## Additional Commands
+
+**Reset the database:**
+
+```bash
+python main.py --init
+```
+
+---
+
+## Debug Mode
+
+Use the `--debug` flag for troubleshooting or development. It increases verbosity and gives insight into internal operations.
+
+### 🔍 What `--debug` Enables
+
+- Prints raw Raindrop API responses  
+- Logs internal decisions (e.g. new vs. updated bookmarks)  
+- Displays database comparisons (`lastUpdate` vs stored)  
+- Notes skipped or already-synced bookmarks  
+
+### 🛠️ Usage
+
+**Run with debug logging:**
+
+```bash
+python main.py --debug
+```
+
+**Run in quiet mode (default):**
+
+```bash
+python main.py
+```
+
+---
+
+## 🔁 Running with Cron (Every Minute)
+
+If you want the sync script to run automatically every minute, you can set up a cron job. This assumes you've cloned the repo to `/opt/raindrop-pocket-sync` and are using a Python virtual environment located at `.venv` inside that folder.
+
+### 🛠️ Step-by-Step Instructions
+
+1. Open your crontab editor:
+
+    ```bash
+    crontab -e
+    ```
+
+2. Add the following line to run the script every minute using the virtual environment's Python:
+
+    ```cron
+    * * * * * /opt/raindrop-pocket-sync/.venv/bin/python /opt/raindrop-pocket-sync/main.py >> /opt/raindrop-pocket-sync/cron.log 2>&1
+    ```
+
+3. Save and exit the editor.
+
+### 📄 Log Output
+
+The script's output (including errors) will be logged to:
+
+```bash
+/opt/raindrop-pocket-sync/cron.log
+```
+
+You can monitor it with:
+
+```bash
+tail -f /opt/raindrop-pocket-sync/cron.log
+```
+
+This setup does **not** require activating the virtual environment manually (`source .venv/bin/activate`) since it runs directly using the `.venv/bin/python` interpreter.
+
+---
 
 ## Supported Sync Fields
 
