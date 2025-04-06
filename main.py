@@ -39,20 +39,30 @@ def get_raindrop_bookmarks(max_total=10000):
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
 
-    page = 0  # Raindrop expects page=0 for first page
+    page = 1  # Start from 1 for better compatibility with Raindrop
     per_page = 100
     all_items = []
 
     while len(all_items) < max_total:
-        url = f"{RAINDROP_API}?sort=-lastUpdate&page={page}&perpage={per_page}"
-        res = requests.get(url, headers=headers)
+        url = f"{RAINDROP_API}?sort=-lastUpdate"
+        params = {
+            "page": page,
+            "perpage": per_page
+        }
+
+        res = requests.get(url, headers=headers, params=params)
         res.raise_for_status()
+
         items = res.json().get("items", [])
+        print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
+
         if not items:
             break
+
         all_items.extend(items)
         if len(items) < per_page:
-            break
+            break  # No more full pages to fetch
+
         page += 1
 
     return all_items[:max_total]
