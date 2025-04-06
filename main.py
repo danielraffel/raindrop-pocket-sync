@@ -34,13 +34,13 @@ def init_db():
     conn.close()
     print("✅ Database initialized.")
 
-def get_raindrop_bookmarks(max_total=10000):
+def get_raindrop_bookmarks(max_total=50):
     headers = {
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
 
-    page = 1  # Start from 1 for better compatibility with Raindrop
-    per_page = 50  # Use 50 if 100 isn't reliably respected
+    page = 1
+    per_page = 50  # Use 50 for reliability
     all_items = []
 
     while len(all_items) < max_total:
@@ -53,10 +53,6 @@ def get_raindrop_bookmarks(max_total=10000):
         res = requests.get(url, headers=headers, params=params)
         res.raise_for_status()
 
-        # Optional: inspect the full response JSON to debug API behavior
-        if DEBUG:
-            print(f"🛠 Full response JSON from page {page}:\n{res.json()}")
-
         items = res.json().get("items", [])
         if DEBUG:
             print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
@@ -66,7 +62,7 @@ def get_raindrop_bookmarks(max_total=10000):
 
         all_items.extend(items)
         if len(items) < per_page:
-            break  # No more full pages to fetch
+            break
 
         page += 1
 
@@ -167,7 +163,8 @@ def mark_all_as_seen():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    bookmarks = get_raindrop_bookmarks(max_total=10000)
+    bookmarks = get_raindrop_bookmarks(max_total=10000)  # override default
+
     for item in bookmarks:
         bid = item["_id"]
         link = item.get("link")
