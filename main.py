@@ -13,7 +13,7 @@ POCKET_CONSUMER_KEY = os.getenv("POCKET_CONSUMER_KEY")
 POCKET_ACCESS_TOKEN = os.getenv("POCKET_ACCESS_TOKEN")
 RAINDROP_COLLECTION_ID = os.getenv("RAINDROP_COLLECTION_ID", "0")
 
-DB_PATH = "db.sqlite3"
+DB_PATH = "/opt/raindrop-pocket-sync/db.sqlite3"
 RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_ID}"
 POCKET_ADD_API = "https://getpocket.com/v3/add"
 POCKET_SEND_API = "https://getpocket.com/v3/send"
