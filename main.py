@@ -82,7 +82,7 @@ def favorite_in_pocket(item_id):
     return res.json()
 
 def run_sync():
-    print(f"🔍 Checking for new or updated bookmarks at {datetime.utcnow().isoformat()}...")
+    print(f"🔍 Checking for new or updated bookmarks at {datetime.now(datetime.UTC).isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
     bookmarks = get_raindrop_bookmarks()
     new_or_updated = 0
