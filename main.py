@@ -135,10 +135,27 @@ def run_sync():
     conn.close()
     print(f"✅ Sync complete. {new_or_updated} bookmarks added or updated.")
 
+def mark_all_as_seen():
+    print("🔖 Marking all current Raindrop bookmarks as seen...")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    bookmarks = get_raindrop_bookmarks()
+    for item in bookmarks:
+        bid = item["_id"]
+        link = item.get("link")
+        last_update = item.get("lastUpdate")
+        if bid and link and last_update:
+            update_db(bid, link, last_update, conn)
+
+    conn.close()
+    print(f"✅ Marked {len(bookmarks)} bookmarks as already seen.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--init", action="store_true", help="Initialize database and exit.")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging.")
+    parser.add_argument("--mark-all-seen", action="store_true", help="Mark all current Raindrop bookmarks as seen.")
     args = parser.parse_args()
 
     DEBUG = args.debug
@@ -148,5 +165,7 @@ if __name__ == "__main__":
 
     if args.init:
         init_db()
+    elif args.mark_all_seen:
+        mark_all_as_seen()
     else:
         run_sync()
