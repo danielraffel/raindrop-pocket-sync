@@ -37,7 +37,7 @@ def init_db():
     conn.close()
     print("✅ Database initialized.")
 
-def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
+def get_raindrop_bookmarks(since_iso, since_id, per_page=50, max_pages=50):
     headers = {
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
@@ -69,7 +69,12 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
         page += 1
 
     # ✅ Filter after all pages are collected
-    filtered_items = [b for b in all_items if isoparse(b["lastUpdate"]) > since_dt]
+    filtered_items = [
+    b for b in all_items
+    if isoparse(b["lastUpdate"]) > since_dt or (
+        isoparse(b["lastUpdate"]) == since_dt and b["_id"] > since_id
+    )
+]    
     return filtered_items
 
 def get_last_update(bookmark_id, conn):
@@ -80,9 +85,9 @@ def get_last_update(bookmark_id, conn):
 
 def get_latest_seen_timestamp(conn):
     cur = conn.cursor()
-    cur.execute("SELECT MAX(last_update) FROM seen_bookmarks")
+    cur.execute("SELECT id, last_update FROM seen_bookmarks ORDER BY last_update DESC, id DESC LIMIT 1")
     row = cur.fetchone()
-    return row[0] if row and row[0] else DEFAULT_TIMESTAMP
+    return (row[1], row[0]) if row else (DEFAULT_TIMESTAMP, 0)
 
 def update_db(bookmark_id, link, last_update, conn):
     cur = conn.cursor()
@@ -124,13 +129,13 @@ def run_sync():
     print(f"🔍 Checking for new or updated bookmarks at {datetime.now(timezone.utc).isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
 
-    since = get_latest_seen_timestamp(conn)
-    since_dt = isoparse(since)
+    since_ts, since_id = get_latest_seen_timestamp(conn)
+    since_dt = isoparse(since_ts)
 
     if DEBUG:
-        print(f"🕒 Last seen update in DB: {since} ({since_dt.isoformat()})")
+        print(f"🕒 Last seen update in DB: {since_ts} ({since_dt.isoformat()})")
 
-    bookmarks = get_raindrop_bookmarks(since_iso=since)
+    bookmarks = get_raindrop_bookmarks(since_iso=since_ts, since_id=since_id)
 
     if DEBUG:
         print(f"📥 Fetched {len(bookmarks)} bookmarks from Raindrop.")
