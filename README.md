@@ -285,6 +285,48 @@ This setup does **not** require activating the virtual environment manually (`so
 
 ---
 
+## 🧹 Log Management
+
+This project writes sync output to a persistent log file:
+
+```
+/opt/raindrop-pocket-sync/cron.log
+```
+
+To prevent the log from growing indefinitely, it's recommended to enable automatic log rotation.
+
+### ✅ Setting Up Log Rotation (via `logrotate`)
+
+You can configure `logrotate` to manage the log file by creating a config at:
+
+```
+/etc/logrotate.d/raindrop-pocket-sync
+```
+
+With the following contents:
+
+```nginx
+/opt/raindrop-pocket-sync/cron.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+
+### 🔍 What This Does
+
+- Rotates the log **daily**
+- Keeps the **last 7 days** of logs (`.gz` compressed)
+- Automatically handles rotation **without stopping the cron job**
+- Skips empty logs and avoids errors if the file doesn't exist
+
+This ensures the cron log stays manageable while still preserving recent sync history for debugging or auditing.
+
+---
+
 ## Supported Sync Fields
 
 | Raindrop       | Pocket        | Notes |
