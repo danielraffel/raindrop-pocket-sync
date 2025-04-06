@@ -44,7 +44,7 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
 
     all_items = []
     page = 1
-    since_dt = isoparse(since_iso)  # ✅ Normalize once outside loop
+    since_dt = isoparse(since_iso)
 
     while page <= max_pages:
         url = RAINDROP_API
@@ -59,30 +59,16 @@ def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
         items = res.json().get("items", [])
 
         if DEBUG:
-            print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
+            print(f"📄 Page {page}: Retrieved {len(items)} bookmarks")
 
         if not items:
             break
 
-        # 🔍 DEBUG: Show first item's timestamp vs. `since_dt`
-        if DEBUG and items:
-            try:
-                top_item_dt = isoparse(items[0]["lastUpdate"])
-                print(f"🕵️ First item on page {page} updated at {items[0]['lastUpdate']} (parsed: {top_item_dt.isoformat()})")
-                print(f"🔁 Comparing to since_dt: {since_dt.isoformat()}")
-            except Exception as e:
-                print(f"⚠️ Failed to parse lastUpdate for debug: {e}")
-
-        # 🛑 Stop only if ALL bookmarks on this page are older than `since_dt`
-        if all(isoparse(b["lastUpdate"]) <= since_dt for b in items):
-            if DEBUG:
-                print(f"⏹️ Stopping at page {page} — all items older than since_iso")
-            break
-
+        # ✅ Add all and continue paginating — don’t break early
         all_items.extend(items)
         page += 1
 
-    # ✅ Filter only bookmarks that are newer than since_dt
+    # ✅ Filter after all pages are collected
     filtered_items = [b for b in all_items if isoparse(b["lastUpdate"]) > since_dt]
     return filtered_items
 
