@@ -113,7 +113,7 @@ def favorite_in_pocket(item_id):
 def run_sync():
     print(f"🔍 Checking for new or updated bookmarks at {datetime.now(timezone.utc).isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
-    bookmarks = get_raindrop_bookmarks(max_total=100)
+    bookmarks = get_raindrop_bookmarks(max_total=200)
 
     if DEBUG:
         print(f"📥 Fetched {len(bookmarks)} bookmarks from Raindrop.")
