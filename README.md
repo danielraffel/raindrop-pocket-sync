@@ -1,4 +1,4 @@
-# Raindrop to Pocket Sync
+# Raindrop.io to Pocket Sync
 
 Backup your bookmarks by syncing new items added to [Raindrop.io](https://raindrop.io) into [Pocket](https://getpocket.com) — no 3rd-party cloud service required.
 
