@@ -34,16 +34,31 @@ def init_db():
     conn.close()
     print("✅ Database initialized.")
 
-def get_raindrop_bookmarks():
+def get_raindrop_bookmarks(max_total=2500):
     headers = {
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
-    res = requests.get(RAINDROP_API + "?sort=-lastUpdate", headers=headers)
-    if DEBUG:
-        print("📡 Raw Raindrop API response:")
-        print(res.text)
-    res.raise_for_status()
-    return res.json().get("items", [])
+
+    page = 0
+    per_page = 100
+    all_items = []
+
+    while len(all_items) < max_total:
+        url = f"{RAINDROP_API}?sort=-lastUpdate&page={page}&perpage={per_page}"
+        res = requests.get(url, headers=headers)
+        res.raise_for_status()
+
+        items = res.json().get("items", [])
+        if not items:
+            break
+
+        all_items.extend(items)
+        if len(items) < per_page:
+            break  # no more pages
+
+        page += 1
+
+    return all_items[:max_total]
 
 def get_last_update(bookmark_id, conn):
     cur = conn.cursor()
@@ -136,11 +151,11 @@ def run_sync():
     print(f"✅ Sync complete. {new_or_updated} bookmarks added or updated.")
 
 def mark_all_as_seen():
-    print("🔖 Marking all current Raindrop bookmarks as seen...")
+    print("🔖 Marking up to 2500 current Raindrop bookmarks as seen...")
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    bookmarks = get_raindrop_bookmarks()
+    bookmarks = get_raindrop_bookmarks(max_total=2500)
     for item in bookmarks:
         bid = item["_id"]
         link = item.get("link")
