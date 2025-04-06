@@ -18,6 +18,8 @@ RAINDROP_API = f"https://api.raindrop.io/rest/v1/raindrops/{RAINDROP_COLLECTION_
 POCKET_ADD_API = "https://getpocket.com/v3/add"
 POCKET_SEND_API = "https://getpocket.com/v3/send"
 
+DEFAULT_TIMESTAMP = "1970-01-01T00:00:00Z"
+
 DEBUG = False
 
 def init_db():
@@ -34,16 +36,15 @@ def init_db():
     conn.close()
     print("✅ Database initialized.")
 
-def get_raindrop_bookmarks(max_total=50):
+def get_raindrop_bookmarks(since_iso, per_page=50, max_pages=50):
     headers = {
         "Authorization": f"Bearer {RAINDROP_TOKEN}"
     }
 
-    page = 1
-    per_page = 50  # Use 50 for reliability
     all_items = []
+    page = 1
 
-    while len(all_items) < max_total:
+    while page <= max_pages:
         url = f"{RAINDROP_API}?sort=-lastUpdate"
         params = {
             "page": page,
@@ -52,27 +53,34 @@ def get_raindrop_bookmarks(max_total=50):
 
         res = requests.get(url, headers=headers, params=params)
         res.raise_for_status()
-
         items = res.json().get("items", [])
+
         if DEBUG:
             print(f"📄 Page {page}: Retrieved {len(items)} bookmarks (total so far: {len(all_items) + len(items)})")
 
         if not items:
             break
 
-        all_items.extend(items)
-        if len(items) < per_page:
+        # Stop fetching once all items on this page are older than last seen
+        if all(b["lastUpdate"] <= since_iso for b in items):
             break
 
+        all_items.extend(items)
         page += 1
 
-    return all_items[:max_total]
+    return all_items
 
 def get_last_update(bookmark_id, conn):
     cur = conn.cursor()
     cur.execute("SELECT last_update FROM seen_bookmarks WHERE id = ?", (bookmark_id,))
     row = cur.fetchone()
     return row[0] if row else None
+
+def get_latest_seen_timestamp(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT MAX(last_update) FROM seen_bookmarks")
+    row = cur.fetchone()
+    return row[0] if row and row[0] else DEFAULT_TIMESTAMP
 
 def update_db(bookmark_id, link, last_update, conn):
     cur = conn.cursor()
@@ -113,7 +121,12 @@ def favorite_in_pocket(item_id):
 def run_sync():
     print(f"🔍 Checking for new or updated bookmarks at {datetime.now(timezone.utc).isoformat()}...")
     conn = sqlite3.connect(DB_PATH)
-    bookmarks = get_raindrop_bookmarks(max_total=200)
+
+    since = get_latest_seen_timestamp(conn)
+    if DEBUG:
+        print(f"🕒 Last seen update in DB: {since}")
+
+    bookmarks = get_raindrop_bookmarks(since_iso=since)
 
     if DEBUG:
         print(f"📥 Fetched {len(bookmarks)} bookmarks from Raindrop.")
@@ -163,7 +176,7 @@ def mark_all_as_seen():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    bookmarks = get_raindrop_bookmarks(max_total=10000)  # override default
+    bookmarks = get_raindrop_bookmarks(since_iso=DEFAULT_TIMESTAMP, per_page=100, max_pages=200)
 
     for item in bookmarks:
         bid = item["_id"]
